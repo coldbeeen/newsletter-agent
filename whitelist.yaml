@@ -1,0 +1,25 @@
+# 화이트리스트: 발신 이메일 주소 기준 1차 판별 + (동일 주소 공유 시) From 표시이름으로 2차 구분.
+# 코드 수정 없이 이 파일만 편집해 뉴스레터를 추가/삭제할 수 있다.
+senders:
+  - address: dan@tldrnewsletter.com
+    newsletters:
+      - name: TLDR IT
+        display_names: ["TLDR IT"]
+      - name: TLDR AI
+        display_names: ["TLDR AI"]
+      - name: TLDR Marketing
+        display_names: ["TLDR Marketing"]
+      - name: TLDR Data
+        display_names: ["TLDR Data"]
+      - name: TLDR
+        display_names: ["TLDR"]
+
+  - address: news@hada.io
+    newsletters:
+      - name: GeekNews Weekly
+        display_names: []  # 주소 단독으로 식별 가능, 표시이름 구분 불필요
+
+  - address: newsletter@mail.routinecrew.net
+    newsletters:
+      - name: Newsletter
+        display_names: []

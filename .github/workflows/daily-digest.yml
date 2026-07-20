@@ -1,0 +1,46 @@
+name: Daily Newsletter Digest
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: '0 23 * * *' # 매일 08:00 KST (전날 23:00 UTC)
+
+permissions:
+  contents: write
+
+jobs:
+  run-digest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install .
+
+      - name: Run digest pipeline
+        env:
+          NAVER_IMAP_USER: ${{ secrets.NAVER_IMAP_USER }}
+          NAVER_IMAP_APP_PASSWORD: ${{ secrets.NAVER_IMAP_APP_PASSWORD }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: newsletter-agent
+
+      - name: Commit updated state file
+        if: success()
+        run: |
+          if [ -n "$(git status --porcelain state/seen_urls.json)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add state/seen_urls.json
+            git commit -m "chore: update seen_urls.json [skip ci]"
+            git push
+          else
+            echo "No changes to state/seen_urls.json"
+          fi
