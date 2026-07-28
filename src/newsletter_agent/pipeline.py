@@ -32,8 +32,8 @@ from newsletter_agent.summarize.report_synthesis import (
     synthesize_overall_summary,
 )
 
-WHITELIST_PATH = Path(__file__).resolve().parents[2] / "whitelist.yaml"
-SEEN_URLS_PATH = Path(__file__).resolve().parents[2] / "state" / "seen_urls.json"
+WHITELIST_PATH = Path.cwd() / "whitelist.yaml"
+SEEN_URLS_PATH = Path.cwd() / "state" / "seen_urls.json"
 LINK_CAP = 50
 
 logger = get_logger(__name__)
