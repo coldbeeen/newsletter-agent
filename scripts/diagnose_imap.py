@@ -7,6 +7,9 @@ from datetime import date, datetime, timedelta, timezone
 
 from imap_tools import AND, MailBox
 
+from newsletter_agent.parsing.html_body import extract_body_region, SENDER_FOOTER_MARKERS
+from newsletter_agent.parsing.links import extract_candidate_links
+
 KST = timezone(timedelta(hours=9))
 
 
@@ -54,10 +57,21 @@ def main() -> None:
                     count += 1
                     try:
                         display_name = msg.from_values.name if msg.from_values else ""
-                        html_len = len(msg.html or msg.text or "")
+                        html_raw = msg.html or msg.text or ""
+                        html_len = len(html_raw)
+                        body_region = extract_body_region(html_raw, addr)
+                        links = extract_candidate_links(body_region)
+                        marker_hit = None
+                        if addr in SENDER_FOOTER_MARKERS:
+                            body_lower = html_raw.lower()
+                            for marker in SENDER_FOOTER_MARKERS[addr]:
+                                if marker.lower() in body_lower:
+                                    marker_hit = marker
+                                    break
                         print(
                             f"    ok date={msg.date} display_name={display_name!r} "
-                            f"subject_len={len(msg.subject or '')} html_len={html_len}"
+                            f"subject_len={len(msg.subject or '')} html_len={html_len} "
+                            f"extracted_links={len(links)} footer_marker_found={marker_hit!r}"
                         )
                     except Exception as inner_exc:
                         errors += 1
