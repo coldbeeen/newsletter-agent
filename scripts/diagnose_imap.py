@@ -29,20 +29,34 @@ def main() -> None:
         print(f"\n=== Currently selected folder: {current_folder!r} ===")
 
         since_7d = date.today() - timedelta(days=7)
-        print(f"\n=== FROM search in current folder, SINCE {since_7d} ===")
+        print(f"\n=== FULL fetch (same as pipeline) in current folder, SINCE {since_7d} ===")
         for addr in TARGET_ADDRESSES:
             query = AND(from_=addr, date_gte=since_7d)
             count = 0
-            subjects_preview = []
-            for msg in mailbox.fetch(query, mark_seen=False, headers_only=True):
-                count += 1
-                if len(subjects_preview) < 3:
-                    subjects_preview.append(
-                        f"date={msg.date} subject_len={len(msg.subject or '')}"
-                    )
-            print(f"  {addr}: {count} messages found")
-            for s in subjects_preview:
-                print(f"    - {s}")
+            errors = 0
+            try:
+                for msg in mailbox.fetch(query, mark_seen=False):
+                    count += 1
+                    try:
+                        display_name = msg.from_values.name if msg.from_values else ""
+                        html_len = len(msg.html or msg.text or "")
+                        print(
+                            f"    ok date={msg.date} display_name={display_name!r} "
+                            f"subject_len={len(msg.subject or '')} html_len={html_len}"
+                        )
+                    except Exception as inner_exc:
+                        errors += 1
+                        print(
+                            f"    PARSE ERROR on message #{count}: "
+                            f"{type(inner_exc).__name__}: {inner_exc}"
+                        )
+            except Exception as loop_exc:
+                print(
+                    f"  {addr}: LOOP RAISED after {count} messages: "
+                    f"{type(loop_exc).__name__}: {loop_exc}"
+                )
+                continue
+            print(f"  {addr}: {count} messages fully parsed, {errors} parse errors")
 
 
 if __name__ == "__main__":
