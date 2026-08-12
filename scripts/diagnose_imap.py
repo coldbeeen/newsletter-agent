@@ -62,16 +62,24 @@ def main() -> None:
                         body_region = extract_body_region(html_raw, addr)
                         links = extract_candidate_links(body_region)
                         marker_hit = None
+                        marker_position = None
                         if addr in SENDER_FOOTER_MARKERS:
                             body_lower = html_raw.lower()
                             for marker in SENDER_FOOTER_MARKERS[addr]:
-                                if marker.lower() in body_lower:
+                                pos = body_lower.find(marker.lower())
+                                if pos != -1:
                                     marker_hit = marker
+                                    marker_position = pos
                                     break
+                        links_no_trim = extract_candidate_links(
+                            __import__("bs4").BeautifulSoup(html_raw, "lxml")
+                        )
                         print(
                             f"    ok date={msg.date} display_name={display_name!r} "
                             f"subject_len={len(msg.subject or '')} html_len={html_len} "
-                            f"extracted_links={len(links)} footer_marker_found={marker_hit!r}"
+                            f"extracted_links={len(links)} links_without_trim={len(links_no_trim)} "
+                            f"footer_marker_found={marker_hit!r} marker_char_pos={marker_position} "
+                            f"context={html_raw[max(0, (marker_position or 0)-80):(marker_position or 0)+80]!r}"
                         )
                     except Exception as inner_exc:
                         errors += 1
