@@ -9,6 +9,12 @@ SENDER_FOOTER_MARKERS: dict[str, tuple[str, ...]] = {
 }
 
 
+# 마커의 조상을 이 태그들 중 하나를 만날 때까지만 타고 올라간다. 이메일 HTML은 흔히
+# <body><table>전체 콘텐츠</table></body> 형태로 중첩되므로, body 직계 자식까지 올라가면
+# 문서 끝의 footer 텍스트 하나 때문에 본문 전체가 삭제될 수 있다.
+_BLOCK_LEVEL_TAGS = frozenset({"tr", "td", "th", "li", "p", "div", "tbody", "table"})
+
+
 def _trim_footer(soup: BeautifulSoup, markers: tuple[str, ...]) -> None:
     if not markers:
         return
@@ -20,9 +26,13 @@ def _trim_footer(soup: BeautifulSoup, markers: tuple[str, ...]) -> None:
         if not any(marker.lower() in text_lower for marker in markers):
             continue
 
-        # 마커를 포함한 최상위(root의 직계 자식) 태그를 찾아, 그 지점부터 이후 형제를 모두 제거한다.
+        # 마커를 포함한 가장 가까운 블록 레벨 조상을 찾아, 그 지점부터 이후 형제를 제거한다.
         marker_ancestor = element
-        while marker_ancestor.parent is not None and marker_ancestor.parent is not root:
+        while (
+            marker_ancestor.parent is not None
+            and marker_ancestor.parent is not root
+            and getattr(marker_ancestor, "name", None) not in _BLOCK_LEVEL_TAGS
+        ):
             marker_ancestor = marker_ancestor.parent
         if marker_ancestor is root:
             continue

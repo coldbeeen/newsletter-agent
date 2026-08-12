@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Literal
+from urllib.parse import urlparse
 
 import httpx
 from bs4 import BeautifulSoup
@@ -10,14 +11,22 @@ logger = get_logger(__name__)
 
 FetchStatus = Literal["ok", "not_found", "blocked"]
 
-# 403 응답이더라도 Cloudflare 등 봇 차단으로 보이는지 판별하기 위한 본문 마커.
+# 200 응답이더라도 봇 차단 인터스티셜로 보이는지 판별하기 위한 본문 마커.
+# "cloudflare"나 "captcha" 단독으로는 그 주제를 다루는 정상 기사와 구별할 수 없으므로,
+# 실제 차단 페이지에서 쓰이는 더 구체적인 문구만 사용한다.
 _BLOCKED_BODY_MARKERS = (
-    "cloudflare",
     "access denied",
     "checking your browser",
-    "captcha",
+    "verify you are human",
+    "enable javascript and cookies to continue",
+    "ray id",
 )
 _LOGIN_REQUIRED_MARKERS = ("please log in", "로그인이 필요", "sign in to continue")
+
+# GeekNews(hada.io) 뉴스레터의 기사 링크는 원문이 아니라 hada.io 자체 토픽(코멘트) 페이지를
+# 가리킨다. 실제 원문 링크는 이 클래스를 가진 앵커 태그에 들어있다.
+_HADA_IO_HOST_SUFFIX = "hada.io"
+_HADA_IO_ORIGINAL_LINK_CLASS = "topic-title-link"
 
 
 @dataclass(frozen=True)
@@ -57,11 +66,28 @@ def fetch_article(url: str, http_client: httpx.Client) -> FetchResult:
         logger.info("Fetch not accessible (login required) for %s", url)
         return FetchResult(status="not_found", text=None, reason="login_required")
 
+    original_url = _find_hada_io_original_link(url, response.text)
+    if original_url is not None:
+        logger.info("Following hada.io topic page %s to original article %s", url, original_url)
+        return fetch_article(original_url, http_client)
+
     text = _extract_main_text(response.text)
     if not text:
         logger.info("Fetch succeeded but no extractable text for %s", url)
         return FetchResult(status="not_found", text=None, reason="empty_content")
     return FetchResult(status="ok", text=text, reason="ok")
+
+
+def _find_hada_io_original_link(url: str, html: str) -> str | None:
+    host = urlparse(url).netloc.lower()
+    if not (host == _HADA_IO_HOST_SUFFIX or host.endswith(f".{_HADA_IO_HOST_SUFFIX}")):
+        return None
+
+    soup = BeautifulSoup(html, "lxml")
+    anchor = soup.find("a", class_=_HADA_IO_ORIGINAL_LINK_CLASS, href=True)
+    if anchor is None:
+        return None
+    return anchor["href"].strip()
 
 
 def _extract_main_text(html: str) -> str:

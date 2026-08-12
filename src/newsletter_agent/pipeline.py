@@ -28,6 +28,7 @@ from newsletter_agent.summarize.client import ClaudeClient
 from newsletter_agent.summarize.report_synthesis import (
     NO_NEWSLETTERS_MESSAGE,
     compose_markdown_report,
+    compose_slack_blocks,
     group_by_topic,
     synthesize_overall_summary,
 )
@@ -105,7 +106,8 @@ def _compose_final_report(
     claude_client: ClaudeClient,
     cap_applied_by_newsletter: dict[str, bool],
     unclassified_names: list[str],
-) -> str:
+) -> tuple[str, list[dict]]:
+    """콘솔용 마크다운 리포트와 Slack용 Block Kit blocks를 함께 구성한다."""
     cap_notices = [
         f"링크가 많아 상위 {LINK_CAP}개까지만 처리한 뉴스레터: {name}"
         for name, applied in cap_applied_by_newsletter.items()
@@ -123,21 +125,25 @@ def _compose_final_report(
         if grouped
         else "오늘 새로 전달할 기사가 없습니다."
     )
-    return compose_markdown_report(overall_summary, grouped, cap_notices, unclassified_notices)
+    markdown_report = compose_markdown_report(
+        overall_summary, grouped, cap_notices, unclassified_notices
+    )
+    blocks = compose_slack_blocks(overall_summary, grouped, cap_notices, unclassified_notices)
+    return markdown_report, blocks
 
 
-def _deliver(report: str, settings: Settings, delivery: str) -> None:
+def _deliver(markdown_report: str, blocks: list[dict], settings: Settings, delivery: str) -> None:
     if delivery == "console":
-        print_report(report)
+        print_report(markdown_report)
         return
 
     if not settings.slack_webhook_url:
         logger.error("SLACK_WEBHOOK_URL not configured; falling back to console output")
-        print_report(report)
+        print_report(markdown_report)
         return
 
     try:
-        send_to_slack(settings.slack_webhook_url, report)
+        send_to_slack(settings.slack_webhook_url, blocks, markdown_report)
     except SlackDeliveryFailed:
         logger.error("Slack delivery failed permanently; exiting with failure status")
         sys.exit(1)
@@ -145,8 +151,10 @@ def _deliver(report: str, settings: Settings, delivery: str) -> None:
 
 def _send_error_alert(settings: Settings, message: str) -> None:
     if settings.slack_webhook_url:
+        alert_text = f"에러 발생: {message}"
+        alert_blocks = [{"type": "section", "text": {"type": "mrkdwn", "text": alert_text}}]
         try:
-            send_to_slack(settings.slack_webhook_url, f"에러 발생: {message}")
+            send_to_slack(settings.slack_webhook_url, alert_blocks, alert_text)
         except SlackDeliveryFailed:
             logger.error("Failed to deliver error alert to Slack")
     logger.error(message)
@@ -186,7 +194,10 @@ def run(delivery: str = "slack") -> None:
             unclassified_names.append(newsletter.newsletter_id.name)
 
     if not newsletters:
-        _deliver(NO_NEWSLETTERS_MESSAGE, settings, delivery)
+        no_newsletters_blocks = [
+            {"type": "section", "text": {"type": "mrkdwn", "text": NO_NEWSLETTERS_MESSAGE}}
+        ]
+        _deliver(NO_NEWSLETTERS_MESSAGE, no_newsletters_blocks, settings, delivery)
         logger.info("Pipeline finished in %.1fs (no newsletters)", time.monotonic() - start_time)
         return
 
@@ -200,10 +211,10 @@ def run(delivery: str = "slack") -> None:
     merged_articles = merge_same_day(all_articles)
     new_articles = seen_store.filter_new(merged_articles)
 
-    report = _compose_final_report(
+    markdown_report, blocks = _compose_final_report(
         new_articles, claude_client, cap_applied_by_newsletter, unclassified_names
     )
-    _deliver(report, settings, delivery)
+    _deliver(markdown_report, blocks, settings, delivery)
 
     today = date.today()
     seen_store.record(new_articles, today)

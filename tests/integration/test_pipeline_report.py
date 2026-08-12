@@ -83,26 +83,32 @@ def test_three_fixture_newsletters_produce_expected_report_and_slack_delivery():
     seen_store = SeenStore({})
     new_articles = seen_store.filter_new(merged)
 
-    report = _compose_final_report(new_articles, claude_client, cap_applied, [])
+    markdown_report, blocks = _compose_final_report(new_articles, claude_client, cap_applied, [])
 
-    # 구조 검증: 전체요약 섹션, 주제 그룹, 기사별 링크+요약 모두 존재
-    assert "## 오늘의 핵심 요약" in report
-    assert "## AI" in report
-    assert "## 개발" in report
-    assert "## 스타트업" in report
-    assert "[AI 기사 읽기](https://example.com/ai-article)" in report
-    assert "[개발 기사 읽기](https://example.com/dev-article)" in report
-    assert "[스타트업 뉴스 읽기](https://example.com/startup-news)" in report
-    assert "(TLDR AI)" in report
-    assert "(GeekNews Weekly)" in report
-    assert "(Newsletter)" in report
+    # 콘솔용 마크다운 리포트 구조 검증: 전체요약 섹션, 주제 그룹, 기사별 링크+요약 모두 존재
+    assert "## 오늘의 핵심 요약" in markdown_report
+    assert "## AI" in markdown_report
+    assert "## 개발" in markdown_report
+    assert "## 스타트업" in markdown_report
+    assert "[AI 기사 읽기](https://example.com/ai-article)" in markdown_report
+    assert "[개발 기사 읽기](https://example.com/dev-article)" in markdown_report
+    assert "[스타트업 뉴스 읽기](https://example.com/startup-news)" in markdown_report
+    assert "(TLDR AI)" in markdown_report
+    assert "(GeekNews Weekly)" in markdown_report
+    assert "(Newsletter)" in markdown_report
+
+    # Slack용 blocks 구조 검증: mrkdwn 링크 문법 사용, 표준 마크다운 문법 없음
+    blocks_str = str(blocks)
+    assert "<https://example.com/ai-article|AI 기사 읽기>" in blocks_str
+    assert "[AI 기사 읽기](https://example.com/ai-article)" not in blocks_str
 
     # Slack 전송 확인
     slack_route = respx.post("https://hooks.slack.com/services/test").mock(
         return_value=httpx.Response(200)
     )
-    send_to_slack("https://hooks.slack.com/services/test", report)
+    send_to_slack("https://hooks.slack.com/services/test", blocks, markdown_report)
 
     assert slack_route.call_count == 1
     sent_body = json.loads(respx.calls.last.request.content)
-    assert sent_body["text"] == report
+    assert sent_body["text"] == markdown_report
+    assert sent_body["blocks"] == blocks

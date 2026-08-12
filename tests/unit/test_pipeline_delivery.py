@@ -27,13 +27,16 @@ def _no_real_sleep():
         yield
 
 
+_SAMPLE_BLOCKS = [{"type": "section", "text": {"type": "mrkdwn", "text": "리포트"}}]
+
+
 @respx.mock
 def test_deliver_slack_final_failure_exits_nonzero():
     respx.post("https://hooks.slack.com/services/test").mock(return_value=httpx.Response(500))
     settings = _make_settings("https://hooks.slack.com/services/test")
 
     with pytest.raises(SystemExit) as exc_info:
-        _deliver("리포트", settings, "slack")
+        _deliver("리포트", _SAMPLE_BLOCKS, settings, "slack")
 
     assert exc_info.value.code == 1
 
@@ -43,10 +46,10 @@ def test_deliver_slack_success_does_not_exit():
     respx.post("https://hooks.slack.com/services/test").mock(return_value=httpx.Response(200))
     settings = _make_settings("https://hooks.slack.com/services/test")
 
-    _deliver("리포트", settings, "slack")  # 예외/exit 없이 정상 종료되어야 함
+    _deliver("리포트", _SAMPLE_BLOCKS, settings, "slack")  # 예외/exit 없이 정상 종료되어야 함
 
 
 def test_deliver_console_mode_never_touches_slack():
     settings = _make_settings(None)
 
-    _deliver("리포트", settings, "console")  # Slack 웹훅 미설정이어도 콘솔은 항상 동작
+    _deliver("리포트", _SAMPLE_BLOCKS, settings, "console")  # Slack 웹훅 미설정이어도 콘솔은 항상 동작

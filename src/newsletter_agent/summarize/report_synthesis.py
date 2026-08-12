@@ -34,6 +34,69 @@ def synthesize_overall_summary(claude_client: ClaudeClient, grouped: dict[str, l
         return OVERALL_SUMMARY_FAILED_PLACEHOLDER
 
 
+def compose_slack_blocks(
+    overall_summary: str,
+    grouped: dict[str, list[Article]],
+    cap_notices: list[str],
+    unclassified_notices: list[str],
+) -> list[dict]:
+    """Slack Block Kit blocks를 구성한다. Slack Incoming Webhook은 표준 마크다운을
+    지원하지 않으므로(mrkdwn 문법: *굵게*, <url|텍스트>), 표준 마크다운 문자열을
+    그대로 보내면 #, [텍스트](url) 등이 날것 텍스트로 노출된다."""
+    blocks: list[dict] = [
+        {
+            "type": "header",
+            "text": {"type": "plain_text", "text": "📰 데일리 다이제스트", "emoji": True},
+        },
+        {
+            "type": "section",
+            "text": {"type": "mrkdwn", "text": f"*📌 오늘의 핵심 요약*\n{overall_summary}"},
+        },
+    ]
+
+    notices = cap_notices + unclassified_notices
+    if notices:
+        blocks.append({"type": "divider"})
+        blocks.append(
+            {
+                "type": "context",
+                "elements": [{"type": "mrkdwn", "text": "_" + " / ".join(notices) + "_"}],
+            }
+        )
+
+    if not grouped:
+        blocks.append({"type": "divider"})
+        blocks.append(
+            {"type": "section", "text": {"type": "mrkdwn", "text": NO_NEW_ARTICLES_MESSAGE}}
+        )
+        return blocks
+
+    for topic, articles in grouped.items():
+        blocks.append({"type": "divider"})
+        blocks.append(
+            {
+                "type": "section",
+                "text": {"type": "mrkdwn", "text": f"*🏷️ {topic}* ({len(articles)}건)"},
+            }
+        )
+        for article in articles:
+            source_names = ", ".join(nl.name for nl in article.source_newsletters)
+            blocks.append(
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": (
+                            f"• <{article.url}|{article.title}>\n"
+                            f"  _{source_names}_ · {article.summary.text}"
+                        ),
+                    },
+                }
+            )
+
+    return blocks
+
+
 def compose_markdown_report(
     overall_summary: str,
     grouped: dict[str, list[Article]],
@@ -71,4 +134,5 @@ __all__ = [
     "group_by_topic",
     "synthesize_overall_summary",
     "compose_markdown_report",
+    "compose_slack_blocks",
 ]
