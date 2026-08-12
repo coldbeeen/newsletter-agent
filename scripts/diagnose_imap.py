@@ -3,9 +3,16 @@
 """
 import os
 import sys
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from imap_tools import AND, MailBox
+
+KST = timezone(timedelta(hours=9))
+
+
+def kst_today_window(now: datetime | None = None) -> date:
+    current = (now or datetime.now(tz=timezone.utc)).astimezone(KST)
+    return (current - timedelta(days=1)).date()
 
 TARGET_ADDRESSES = [
     "dan@tldrnewsletter.com",
@@ -28,10 +35,18 @@ def main() -> None:
         current_folder = mailbox.folder.get()
         print(f"\n=== Currently selected folder: {current_folder!r} ===")
 
+        now_utc = datetime.now(tz=timezone.utc)
+        since_pipeline = kst_today_window(now_utc)
+        print(f"\n=== Reproducing pipeline exactly ===")
+        print(f"  now_utc={now_utc}")
+        print(f"  now_kst={now_utc.astimezone(KST)}")
+        print(f"  since_date_kst (pipeline's SINCE value)={since_pipeline}")
+
         since_7d = date.today() - timedelta(days=7)
-        print(f"\n=== FULL fetch (same as pipeline) in current folder, SINCE {since_7d} ===")
+        print(f"\n=== FULL fetch (same as pipeline) in current folder, SINCE {since_pipeline} (pipeline value) ===")
         for addr in TARGET_ADDRESSES:
-            query = AND(from_=addr, date_gte=since_7d)
+            query = AND(from_=addr, date_gte=since_pipeline)
+            print(f"  raw IMAP query string: {query!r}")
             count = 0
             errors = 0
             try:
