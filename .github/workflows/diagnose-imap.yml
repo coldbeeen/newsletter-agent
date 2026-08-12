@@ -24,3 +24,13 @@ jobs:
           NAVER_IMAP_USER: ${{ secrets.NAVER_IMAP_USER }}
           NAVER_IMAP_APP_PASSWORD: ${{ secrets.NAVER_IMAP_APP_PASSWORD }}
         run: python scripts/diagnose_imap.py
+
+      - name: Install full package
+        run: pip install .
+
+      - name: Run actual pipeline in console mode (no Slack/Claude side effects on seen_urls)
+        env:
+          NAVER_IMAP_USER: ${{ secrets.NAVER_IMAP_USER }}
+          NAVER_IMAP_APP_PASSWORD: ${{ secrets.NAVER_IMAP_APP_PASSWORD }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: newsletter-agent --console
