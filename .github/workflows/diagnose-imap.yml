@@ -1,0 +1,26 @@
+name: Diagnose IMAP (temporary)
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install imap-tools
+
+      - name: Run IMAP diagnosis
+        env:
+          NAVER_IMAP_USER: ${{ secrets.NAVER_IMAP_USER }}
+          NAVER_IMAP_APP_PASSWORD: ${{ secrets.NAVER_IMAP_APP_PASSWORD }}
+        run: python scripts/diagnose_imap.py
