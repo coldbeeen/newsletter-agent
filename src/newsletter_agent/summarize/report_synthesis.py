@@ -97,6 +97,12 @@ def compose_slack_blocks(
     return blocks
 
 
+def chunk_blocks(blocks: list[dict], max_size: int = 50) -> list[list[dict]]:
+    """Slack Block Kit은 메시지당 최대 50개 block만 허용하므로, 그 이상이면
+    여러 메시지로 나눠 보낼 수 있도록 max_size 단위로 순서를 보존해 분할한다."""
+    return [blocks[i : i + max_size] for i in range(0, len(blocks), max_size)]
+
+
 def compose_markdown_report(
     overall_summary: str,
     grouped: dict[str, list[Article]],
@@ -135,4 +141,5 @@ __all__ = [
     "synthesize_overall_summary",
     "compose_markdown_report",
     "compose_slack_blocks",
+    "chunk_blocks",
 ]

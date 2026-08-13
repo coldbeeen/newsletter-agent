@@ -1,6 +1,6 @@
 from newsletter_agent.models import Article, ArticleSummary, NewsletterId
 from newsletter_agent.parsing.article_fetch import FetchResult
-from newsletter_agent.summarize.report_synthesis import compose_slack_blocks
+from newsletter_agent.summarize.report_synthesis import chunk_blocks, compose_slack_blocks
 
 
 def _article(title, url, topic, summary_text, source_name):
@@ -67,3 +67,30 @@ def test_compose_slack_blocks_includes_cap_and_unclassified_notices():
     serialized = str(blocks)
     assert "상위 50개까지만 처리한 뉴스레터: TLDR AI" in serialized
     assert "표시이름 미분류로 처리된 뉴스레터: TLDR(미분류)" in serialized
+
+
+def test_chunk_blocks_splits_into_groups_of_max_size():
+    blocks = [{"type": "section", "text": {"type": "mrkdwn", "text": str(i)}} for i in range(120)]
+
+    chunks = chunk_blocks(blocks, max_size=50)
+
+    assert len(chunks) == 3
+    assert [len(c) for c in chunks] == [50, 50, 20]
+
+
+def test_chunk_blocks_preserves_order_and_content():
+    blocks = [{"type": "section", "text": {"type": "mrkdwn", "text": str(i)}} for i in range(120)]
+
+    chunks = chunk_blocks(blocks, max_size=50)
+
+    flattened = [block for chunk in chunks for block in chunk]
+    assert flattened == blocks
+
+
+def test_chunk_blocks_under_limit_returns_single_chunk():
+    blocks = [{"type": "section", "text": {"type": "mrkdwn", "text": str(i)}} for i in range(10)]
+
+    chunks = chunk_blocks(blocks, max_size=50)
+
+    assert len(chunks) == 1
+    assert chunks[0] == blocks

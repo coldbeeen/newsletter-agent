@@ -2,8 +2,11 @@ import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from newsletter_agent.logging_config import get_logger
+from newsletter_agent.summarize.report_synthesis import chunk_blocks
 
 logger = get_logger(__name__)
+
+SLACK_BLOCK_LIMIT = 50
 
 
 class SlackDeliveryFailed(Exception):
@@ -12,9 +15,11 @@ class SlackDeliveryFailed(Exception):
 
 def send_to_slack(webhook_url: str, blocks: list[dict], fallback_text: str) -> None:
     """Slack Incoming Webhook으로 Block Kit blocks를 전송한다.
-    fallback_text는 알림 미리보기/접근성용 텍스트로 blocks와 함께 전송된다."""
+    fallback_text는 알림 미리보기/접근성용 텍스트로 blocks와 함께 전송된다.
+    Slack은 메시지당 최대 50개 block만 허용하므로, 초과하면 여러 메시지로 나눠 순서대로 보낸다."""
     try:
-        _post_with_retry(webhook_url, blocks, fallback_text)
+        for chunk in chunk_blocks(blocks, max_size=SLACK_BLOCK_LIMIT):
+            _post_with_retry(webhook_url, chunk, fallback_text)
     except Exception as exc:
         logger.error("Slack delivery failed after retries: %s", exc)
         raise SlackDeliveryFailed(str(exc)) from exc
