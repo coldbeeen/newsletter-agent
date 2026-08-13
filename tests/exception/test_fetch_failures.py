@@ -1,10 +1,10 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx
 import respx
 
-from newsletter_agent.models import EmailMessage, NewsletterId, Newsletter
+from newsletter_agent.models import EmailMessage, Newsletter, NewsletterId
 from newsletter_agent.pipeline import _process_newsletter_articles
 
 FIXTURES = Path(__file__).parent.parent / "fixtures" / "emails"
@@ -22,7 +22,7 @@ def _make_newsletter() -> Newsletter:
         from_addr="dan@tldrnewsletter.com",
         from_display_name="TLDR IT",
         subject="Two Links Digest",
-        received_at=datetime(2026, 7, 19, 12, 0, 0),
+        received_at=datetime(2026, 7, 19, 12, 0, 0, tzinfo=UTC),
         html_body=html,
     )
     return Newsletter(newsletter_id=NewsletterId(name="TLDR IT"), email=email)

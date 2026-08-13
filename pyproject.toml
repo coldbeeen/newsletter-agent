@@ -24,7 +24,7 @@ dev = [
     "pytest-mock>=3.14",
     "respx>=0.21",
     "freezegun>=1.5",
-    "ruff>=0.6",
+    "ruff==0.16.2",
 ]
 
 [project.scripts]
@@ -35,3 +35,12 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+# 프로젝트 코드의 한글 주석/문자열 비중이 높아 88자 기본값은 대부분 한글 줄에서
+# 불필요하게 걸린다. 실측(2026-08-13) 결과 최대 120자, 100자 초과는 14건뿐이라
+# 110자로 고정하면 대다수는 자연히 해소되고 나머지 소수만 실제로 손보게 된다.
+line-length = 110
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "DTZ", "UP", "RUF"]

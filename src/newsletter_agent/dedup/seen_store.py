@@ -1,7 +1,7 @@
 import json
 import os
 import tempfile
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
 from newsletter_agent.models import Article
@@ -29,7 +29,7 @@ class SeenStore:
             self._urls[article.normalized_url] = today_str
 
     def prune(self, retention_days: int, today: date | None = None) -> None:
-        cutoff = (today or date.today()) - timedelta(days=retention_days)
+        cutoff = (today or datetime.now(tz=UTC).date()) - timedelta(days=retention_days)
         self._urls = {
             url: seen_date
             for url, seen_date in self._urls.items()

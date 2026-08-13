@@ -1,10 +1,10 @@
 import logging
 
 from newsletter_agent.dedup.same_day import merge_same_day
-from newsletter_agent.summarize.report_synthesis import compose_markdown_report, group_by_topic
 from newsletter_agent.models import Article, ArticleSummary, NewsletterId
 from newsletter_agent.parsing.article_fetch import FetchResult
 from newsletter_agent.parsing.links import normalize_url
+from newsletter_agent.summarize.report_synthesis import compose_markdown_report, group_by_topic
 
 FAKE_SECRETS = ["sk-ant-supersecretkey123", "naver-app-password-xyz", "T00/B00/fakewebhooksecret"]
 

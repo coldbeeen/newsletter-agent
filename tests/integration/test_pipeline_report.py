@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx
@@ -20,9 +20,14 @@ class _FakeClaudeClient:
     """기사 본문/발췌문에 따라 그럴듯한 JSON 요약을 돌려주는 가짜 Claude 클라이언트."""
 
     def summarize_text(self, text: str, sentence_range=(3, 5)) -> str:
-        # 전체 요약 합성 호출은 여러 기사 요약을 컨텍스트로 받으므로 대괄호 토픽 라벨(예: "[AI]")이 다수 포함된다.
+        # 전체 요약 합성 호출은 여러 기사 요약을 컨텍스트로 받으므로
+        # 대괄호 토픽 라벨(예: "[AI]")이 다수 포함된다.
         if text.count("[AI]") + text.count("[개발]") + text.count("[스타트업]") >= 2:
-            return "오늘은 AI, 개발, 스타트업 소식이 있었습니다.\n각 분야에서 주목할 만한 발표가 있었습니다.\n전반적으로 활발한 한 주였습니다."
+            return (
+                "오늘은 AI, 개발, 스타트업 소식이 있었습니다.\n"
+                "각 분야에서 주목할 만한 발표가 있었습니다.\n"
+                "전반적으로 활발한 한 주였습니다."
+            )
         if "AI 기사 본문" in text:
             return '{"summary": "AI 기사 요약입니다.", "topic": "AI"}'
         if "개발 기사 본문" in text:
@@ -39,7 +44,7 @@ def _make_email(from_addr: str, display_name: str, subject: str, fixture_name: s
         from_addr=from_addr,
         from_display_name=display_name,
         subject=subject,
-        received_at=datetime(2026, 7, 20, 9, 0, 0),
+        received_at=datetime(2026, 7, 20, 9, 0, 0, tzinfo=UTC),
         html_body=html,
     )
 

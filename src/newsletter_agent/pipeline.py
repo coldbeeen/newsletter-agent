@@ -1,6 +1,6 @@
 import sys
 import time
-from datetime import date
+from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx
@@ -216,12 +216,16 @@ def run(delivery: str = "slack") -> None:
     )
     _deliver(markdown_report, blocks, settings, delivery)
 
-    today = date.today()
+    today = datetime.now(tz=UTC).date()
     seen_store.record(new_articles, today)
     seen_store.prune(settings.seen_urls_retention_days, today)
     seen_store.save(SEEN_URLS_PATH)
 
-    logger.info("Pipeline finished in %.1fs (%d articles delivered)", time.monotonic() - start_time, len(new_articles))
+    logger.info(
+        "Pipeline finished in %.1fs (%d articles delivered)",
+        time.monotonic() - start_time,
+        len(new_articles),
+    )
 
 
 def main() -> None:

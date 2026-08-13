@@ -137,9 +137,9 @@ __all__ = [
     "NO_NEW_ARTICLES_MESSAGE",
     "OVERALL_SUMMARY_FAILED_PLACEHOLDER",
     "SUMMARY_FAILED_PLACEHOLDER",
-    "group_by_topic",
-    "synthesize_overall_summary",
+    "chunk_blocks",
     "compose_markdown_report",
     "compose_slack_blocks",
-    "chunk_blocks",
+    "group_by_topic",
+    "synthesize_overall_summary",
 ]

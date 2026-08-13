@@ -3,13 +3,13 @@ import respx
 
 from newsletter_agent.parsing.html_body import extract_body_region
 from newsletter_agent.parsing.links import (
+    RawLink,
     extract_candidate_links,
     is_excluded_by_common_filters,
     normalize_url,
     resolve_redirect,
     select_top_links,
 )
-from newsletter_agent.parsing.links import RawLink
 
 
 def test_extract_candidate_links_honors_sender_footer_cutoff():

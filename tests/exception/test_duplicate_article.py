@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx
@@ -17,14 +17,16 @@ class _FakeClaudeClient:
         return '{"summary": "동일 기사 요약입니다.", "topic": "AI"}'
 
 
-def _make_newsletter(from_addr: str, display_name: str, newsletter_name: str, fixture: str, subject: str) -> Newsletter:
+def _make_newsletter(
+    from_addr: str, display_name: str, newsletter_name: str, fixture: str, subject: str
+) -> Newsletter:
     html = FIXTURES.joinpath(fixture).read_text(encoding="utf-8")
     email = EmailMessage(
         msg_id=f"{from_addr}-{subject}",
         from_addr=from_addr,
         from_display_name=display_name,
         subject=subject,
-        received_at=datetime(2026, 7, 19, 12, 0, 0),
+        received_at=datetime(2026, 7, 19, 12, 0, 0, tzinfo=UTC),
         html_body=html,
     )
     return Newsletter(newsletter_id=NewsletterId(name=newsletter_name), email=email)
@@ -34,7 +36,9 @@ def _make_newsletter(from_addr: str, display_name: str, newsletter_name: str, fi
 def test_same_article_in_two_newsletters_merges_with_two_sources(tmp_path):
     respx.head(url__regex=r"https://example\.com/shared.*").mock(return_value=httpx.Response(200))
     respx.get(url__regex=r"https://example\.com/shared.*").mock(
-        return_value=httpx.Response(200, text="<html><body><article><p>공유된 기사 본문입니다.</p></article></body></html>")
+        return_value=httpx.Response(
+            200, text="<html><body><article><p>공유된 기사 본문입니다.</p></article></body></html>"
+        )
     )
 
     tldr_html = '<html><body><p><a href="https://example.com/shared?utm_source=tldr">기사</a></p></body></html>'
@@ -42,11 +46,11 @@ def test_same_article_in_two_newsletters_merges_with_two_sources(tmp_path):
 
     tldr_email = EmailMessage(
         msg_id="1", from_addr="dan@tldrnewsletter.com", from_display_name="TLDR AI",
-        subject="TLDR Digest", received_at=datetime(2026, 7, 19, 9, 0, 0), html_body=tldr_html,
+        subject="TLDR Digest", received_at=datetime(2026, 7, 19, 9, 0, 0, tzinfo=UTC), html_body=tldr_html,
     )
     geeknews_email = EmailMessage(
         msg_id="2", from_addr="news@hada.io", from_display_name="", subject="GeekNews Digest",
-        received_at=datetime(2026, 7, 19, 10, 0, 0), html_body=geeknews_html,
+        received_at=datetime(2026, 7, 19, 10, 0, 0, tzinfo=UTC), html_body=geeknews_html,
     )
     newsletters = [
         Newsletter(newsletter_id=NewsletterId(name="TLDR AI"), email=tldr_email),
@@ -72,13 +76,15 @@ def test_same_article_in_two_newsletters_merges_with_two_sources(tmp_path):
 def test_article_seen_yesterday_excluded_from_todays_report(tmp_path):
     respx.head(url__regex=r"https://example\.com/shared.*").mock(return_value=httpx.Response(200))
     respx.get(url__regex=r"https://example\.com/shared.*").mock(
-        return_value=httpx.Response(200, text="<html><body><article><p>공유된 기사 본문입니다.</p></article></body></html>")
+        return_value=httpx.Response(
+            200, text="<html><body><article><p>공유된 기사 본문입니다.</p></article></body></html>"
+        )
     )
 
     tldr_html = '<html><body><p><a href="https://example.com/shared?utm_source=tldr">기사</a></p></body></html>'
     tldr_email = EmailMessage(
         msg_id="1", from_addr="dan@tldrnewsletter.com", from_display_name="TLDR AI",
-        subject="TLDR Digest", received_at=datetime(2026, 7, 20, 9, 0, 0), html_body=tldr_html,
+        subject="TLDR Digest", received_at=datetime(2026, 7, 20, 9, 0, 0, tzinfo=UTC), html_body=tldr_html,
     )
     newsletter = Newsletter(newsletter_id=NewsletterId(name="TLDR AI"), email=tldr_email)
 

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 from newsletter_agent.mail.whitelist import Whitelist
@@ -16,7 +16,7 @@ def _make_email(from_addr: str, display_name: str, subject: str, fixture_name: s
         from_addr=from_addr,
         from_display_name=display_name,
         subject=subject,
-        received_at=datetime(2026, 7, 19, 12, 0, 0),
+        received_at=datetime(2026, 7, 19, 12, 0, 0, tzinfo=UTC),
         html_body=html,
     )
 
